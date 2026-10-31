@@ -220,4 +220,28 @@ select, .state-filter input { color: #dce3f3; background: #182238; border: 1px s
   .profile-field input, .profile-field select, .profile-field textarea { font-size: 16px; }.profile-actions { display: grid; grid-template-columns: 1fr; }
   .profile-clear { justify-self: center; }.profile-layout { gap: 20px; }.profile-privacy { margin-bottom: 22px; }.profile-message { padding: 14px; }
 }
+.personalization-panel { border: 1px solid #3c4268; border-radius: 13px; padding: 20px; margin: 0 0 22px; background: linear-gradient(120deg, #1a213e, #131d30); }
+.explorer-views { display: inline-flex; gap: 5px; padding: 4px; background: #0d1426; border: 1px solid #323d59; border-radius: 9px; margin-bottom: 18px; }
+.explorer-views button { display: inline-flex; align-items: center; gap: 8px; border: 1px solid transparent; background: transparent; border-radius: 6px; padding: 10px 15px; font-size: 12px; color: #aebbd6; }
+.explorer-views button[aria-pressed="true"] { background: #34395f; color: #e3e4ff; border-color: #6369a6; }
+.explorer-views .icon { width: 16px; height: 16px; }
+.personalization-copy { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.personalization-copy h2 { font-size: 16px; font-weight: 550; margin: 0 0 7px; }
+.personalization-copy p { font-size: 12px; color: #acbbd7; margin: 0; max-width: 780px; }
+.personalization-copy > .text-link { white-space: nowrap; flex-shrink: 0; }
+.personalization-copy .matching-limited { color: #d5c7a5; margin-top: 9px; }
+.matching-method { margin-top: 15px; border-top: 1px solid #343e5b; padding-top: 13px; }
+.matching-method summary, .match-explanation summary { cursor: pointer; color: #c3c6ff; font-size: 12px; }
+.matching-method p { font-size: 12px; color: #acbbd7; margin: 10px 0 0; }
+.match-explanation { margin-top: 17px; border: 1px solid #354363; border-radius: 8px; padding: 13px; background: #0e172a; }
+.relevance-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; }
+.relevance-badge .icon { width: 16px; height: 16px; }
+.relevance-high { color: #a7e4cd; }.relevance-medium { color: #c2c4ff; }.relevance-low { color: #bac3d7; }
+.match-explanation .match-caution { color: #a9b7d1; font-size: 10px; margin: 6px 0 11px; }
+.match-explanation h3 { font-size: 11px; font-weight: 600; margin: 15px 0 8px; color: #dce3f7; }
+.match-explanation ul { list-style: disc; padding-left: 16px; margin: 0; font-size: 11px; line-height: 1.7; color: #b0bfd9; overflow-wrap: anywhere; }
+.match-explanation li + li { margin-top: 8px; }
+.matching-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
+.opportunity-grid.is-personalized { align-items: start; }
+@media (max-width: 640px) { .personalization-panel { padding: 17px; }.personalization-copy { flex-direction: column; align-items: start; gap: 15px; }.explorer-views { display: flex; }.explorer-views button { flex: 1; justify-content: center; padding-inline: 10px; }.match-explanation { padding: 15px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; }.opportunity-card:hover { transform: none; } }
