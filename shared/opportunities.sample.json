@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-31T17:40:06Z",
+  "items": [
+    {
+      "id": "demo-scholarship",
+      "category": "scholarship",
+      "title": "[DEMO] Fictional Student Scholarship",
+      "provider": "Fictional Demo Scholarship Provider",
+      "summary": "Fictional scholarship used only to demonstrate the PHAROS data structure. This is not a real offer.",
+      "cost": "unknown",
+      "eligibilitySummary": "Eligibility is unspecified for this fictional example.",
+      "applicability": {
+        "scope": "unknown",
+        "states": []
+      },
+      "deadline": {
+        "type": "unknown",
+        "date": null,
+        "note": null
+      },
+      "sourceName": null,
+      "sourceUrl": null,
+      "sourceType": "unknown",
+      "verificationStatus": "demo",
+      "lastVerifiedAt": null,
+      "verifiedBy": null,
+      "topics": ["general"],
+      "tags": ["demo", "fictional", "scholarship"]
+    },
+    {
+      "id": "demo-free-course",
+      "category": "course_cert",
+      "title": "[DEMO] Fictional Free Web Development Course",
+      "provider": "Fictional Demo Course Provider",
+      "summary": "Fictional free web development course used only to demonstrate the PHAROS data structure. This is not a real offer.",
+      "cost": "free",
+      "eligibilitySummary": "Eligibility is unspecified for this fictional example.",
+      "applicability": {
+        "scope": "unknown",
+        "states": []
+      },
+      "deadline": {
+        "type": "unknown",
+        "date": null,
+        "note": null
+      },
+      "sourceName": null,
+      "sourceUrl": null,
+      "sourceType": "unknown",
+      "verificationStatus": "demo",
+      "lastVerifiedAt": null,
+      "verifiedBy": null,
+      "topics": ["web_dev"],
+      "tags": ["demo", "fictional", "course"]
+    },
+    {
+      "id": "demo-student-software-benefit",
+      "category": "software_perk",
+      "title": "[DEMO] Fictional Student Software Benefit",
+      "provider": "Fictional Demo Software Provider",
+      "summary": "Fictional student software benefit used only to demonstrate the PHAROS data structure. This is not a real offer.",
+      "cost": "unknown",
+      "eligibilitySummary": "Student eligibility requirements are unspecified for this fictional example.",
+      "applicability": {
+        "scope": "unknown",
+        "states": []
+      },
+      "deadline": {
+        "type": "unknown",
+        "date": null,
+        "note": null
+      },
+      "sourceName": null,
+      "sourceUrl": null,
+      "sourceType": "unknown",
+      "verificationStatus": "demo",
+      "lastVerifiedAt": null,
+      "verifiedBy": null,
+      "topics": ["general"],
+      "tags": ["demo", "fictional", "student-software"]
+    }
+  ]
+}
