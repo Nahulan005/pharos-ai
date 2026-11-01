@@ -1,5 +1,57 @@
 @import "tailwindcss";
 
+.assistant-shell { border: 1px solid #35415c; border-radius: 18px; background: #10192c; overflow: hidden; }
+.assistant-toolbar { padding: 20px 24px; display: flex; gap: 16px; align-items: center; justify-content: space-between; border-bottom: 1px solid #303c54; }
+.assistant-toolbar > div { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.assistant-toolbar strong { font-size: 14px; }
+.assistant-connection { font-size: 11px; color: #b4c2dc; }
+.assistant-toolbar button { flex-shrink: 0; }
+.assistant-notice { display: flex; gap: 14px; margin: 24px; padding: 20px; border: 1px solid #3b526a; border-radius: 12px; background: #14283a; }
+.assistant-notice > .icon { color: #8fdaeb; }
+.assistant-notice h2 { font-size: 17px; margin-bottom: 8px; }
+.assistant-notice p { color: #b7c9dc; font-size: 13px; }
+.assistant-links { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; }
+.assistant-links a, .assistant-citations a { color: #8fdaeb; text-decoration: underline; text-underline-offset: 4px; }
+.assistant-messages { padding: 0 24px; }
+.assistant-empty { text-align: center; max-width: 520px; padding: 38px 12px; margin: auto; }
+.assistant-empty .brand-mark { margin: 0 auto 20px; }
+.assistant-empty h2 { font-size: 21px; }
+.assistant-empty p { font-size: 14px; color: #aebed8; }
+.assistant-message { padding: 22px; margin: 24px 0; max-width: 90%; border: 1px solid #36435e; border-radius: 16px 16px 16px 4px; background: #162239; overflow-wrap: anywhere; }
+.assistant-message.user { margin-left: auto; background: #292b53; border-color: #4b4a80; border-radius: 16px 16px 4px 16px; }
+.assistant-speaker { display: block; font-size: 10px; letter-spacing: 1.4px; color: #a8acf5; margin-bottom: 12px; }
+.assistant-answer { white-space: pre-wrap; font-size: 14px; line-height: 1.85; margin-bottom: 0; }
+.assistant-grounding, .assistant-disclaimer { font-size: 12px; color: #acc8d7; }
+.assistant-disclaimer { margin: 20px 0 0; color: #b7c1d4; }
+.assistant-citations { border-top: 1px solid #384863; padding-top: 18px; margin-top: 20px; }
+.assistant-citations h3 { font-size: 13px; }
+.assistant-citations ol { list-style: decimal; padding-left: 22px; }
+.assistant-citations li { margin: 10px 0; font-size: 13px; }
+.assistant-citations .icon { display: inline; width: 14px; height: 14px; vertical-align: middle; }
+.assistant-prompts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 24px; }
+.assistant-prompts button { border: 1px solid #3a4966; background: #152038; color: #c6d3ea; padding: 16px; border-radius: 10px; text-align: left; font-size: 12px; line-height: 1.7; }
+.assistant-prompts button:hover:not(:disabled) { background: #222d4d; border-color: #8285c9; }
+.assistant-prompts .icon { display: block; margin-top: 12px; color: #a4a8ef; }
+.assistant-composer { border-top: 1px solid #303c54; padding: 24px; background: #0d1628; }
+.assistant-composer label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 12px; }
+.assistant-composer textarea { font: inherit; font-size: 14px; color: #e8edf8; width: 100%; resize: vertical; min-height: 100px; max-height: 360px; padding: 16px; border: 1px solid #4a5675; border-radius: 10px; background: #141f36; }
+.assistant-composer-actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 12px; }
+.assistant-composer-actions span, .assistant-composer > p { font-size: 11px; color: #a8b7d0; }
+.assistant-composer > p { margin: 18px 0 0; }
+.assistant-request-status { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 24px; font-size: 13px; }
+.assistant-request-status .spinner { width: 20px; height: 20px; margin: 0; }
+.assistant-error { margin: 24px; padding: 16px; color: #ffd2ce; background: #38232f; border: 1px solid #855367; border-radius: 10px; font-size: 13px; }
+@media (max-width: 640px) {
+  .assistant-toolbar { align-items: start; padding: 16px; flex-wrap: wrap; }
+  .assistant-prompts { grid-template-columns: 1fr; padding: 16px; }
+  .assistant-prompts button { display: flex; align-items: center; gap: 12px; }
+  .assistant-prompts .icon { margin: 0; }
+  .assistant-notice { margin: 16px; padding: 16px; }
+  .assistant-messages { padding: 0 16px; }
+  .assistant-message { max-width: 100%; padding: 16px; }
+  .assistant-composer { padding: 16px; }
+}
+
 .roadmap-panel { padding: 26px; margin: 24px 0; border: 1px solid #303b56; border-radius: 16px; background: #111a2d; }
 .roadmap-panel h2, .roadmap-timeline h2 { font-size: 21px; margin-bottom: 12px; }
 .roadmap-panel p, .roadmap-timeline p { color: #b1bfd8; font-size: 14px; }
