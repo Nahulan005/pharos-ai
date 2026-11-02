@@ -81,7 +81,50 @@ curl http://127.0.0.1:3000/api/opportunities/demo-scholarship
 curl -i http://127.0.0.1:3000/api/opportunities/not-a-real-id
 ```
 
-## Continuing development
+## Source registry
+
+`src/sourceRegistry.ts` exports typed, immutable candidate metadata for National
+Scholarship Portal, Naan Mudhalvan, SWAYAM, NPTEL, Buddy4Study, Internshala and
+GitHub Education (a specifically identified software-benefit provider).
+Categories reuse the shared contract; internship/job categories are not invented.
+
+Every candidate permits only `manual_review`, has automated access status
+`not_reviewed`, and has `lastReviewedAt: null`. A listed URL, an official source,
+or discovery of a website is not scraping permission or an access-policy review.
+No retrieval, scraping, scheduling, LLM integration or new API route is added.
+
+```ts
+import {
+  getSourceById, isValidSourceUrl, isSourceUrl,
+  isAutomatedRetrievalPermitted, getSourceTrust,
+} from './src/sourceRegistry.ts'
+
+getSourceById('swayam') // Source | undefined
+isValidSourceUrl('https://swayam.gov.in/') // offline HTTPS syntax check
+isSourceUrl('swayam', 'https://swayam.gov.in/course') // exact registered origin
+isAutomatedRetrievalPermitted('swayam', 'web_fetch') // false
+getSourceTrust('swayam') // provenance; verifiesIndividualClaims is always false
+```
+
+URL validation rejects credentials, fragments, whitespace, backslashes and
+nonstandard ports. It does not check DNS, ownership, reachability or redirects.
+Origin matching does not approve subdomains or partner sites. A future retriever
+must separately address redirects, network safety and reviewed URL/path scope.
+
+The permission helper requires explicit approval, a recorded review, a permitted
+automated method and a matching target origin. All current entries fail closed.
+Before enabling a method, perform and document a genuine terms/access-policy
+review, including relevant robots rules, rate limits and allowed scope; extend
+the policy model as necessary. No public API/feed availability is assumed.
+
+`getSourceTrust` describes provenance, not factual certainty. Official/provider
+status never sets an opportunity's `verificationStatus`, proves eligibility or
+validates deadlines. Individual claims need their own evidence and review under
+the existing shared contract. Third-party listings need issuer corroboration.
+Registry tests cover disabled access, unknown IDs, URL boundaries, immutability
+and the separation of source provenance from claim verification.
+
+## Further development
 
 Continue on `feature/pharos-functions`. Preserve existing work and coordinate
 changes to the shared contract with the frontend owner. `src/app.ts` builds the
