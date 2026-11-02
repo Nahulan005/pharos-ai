@@ -126,6 +126,124 @@ and the separation of source provenance from claim verification.
 
 ## Further development
 
+### Model-independent provider contract and grounded answers (Step 6A)
+
+No model transport or public endpoint is added. `src/aiProvider.ts` defines
+`AIProvider` with `providerId`, `modelId`, and `generate(GenerationRequest)`.
+Requests contain role-separated messages, JSON response format, timeout and an
+AbortSignal. Responses contain provider/model identity, raw content and a finish
+reason; failures use typed codes with fixed sanitized messages. There is no
+default provider, network client, Ollama import or dependency on a model family.
+
+`generateWithProvider` applies a 60-second default timeout (configurable integer
+1–300000 ms), forwards cancellation, suppresses late results, cleans up timers
+and listeners, and sanitizes returned failures and thrown exceptions. It rejects
+wrong provider/model identity, incomplete/truncated generation and oversized or
+empty output. Adapters must honor abort themselves; the wrapper can stop waiting
+but cannot forcibly stop computation in an uncooperative injected implementation.
+There is no streaming, automatic retry, tool execution or provider fallback.
+
+`src/groundedPrompt.ts` defines the internal `GroundedAnswerRequest`: student
+question, explicit uncertainties/review warnings, and evidence entries consisting
+of a citation ID, existing `EvidenceInput`, and existing `EvidenceReport`. It does
+not replace any frontend request format. The prompt builder snapshots input,
+checks report/reference identity, reuses the assessment engine at the recorded
+assessment instant, and cross-checks related findings for the same opportunity.
+Existing reports with additional conflicts/warnings are preserved. Callers must
+run a fresh assessment before generation; this builder does not refresh old
+assessment timestamps or independently authenticate reports.
+
+Instructions occupy one fixed system message. The question and evidence occupy
+one JSON-encoded user message. Source text, source names, URLs and quoted prompt
+instructions remain untrusted data. The system forbids invented deadlines, costs,
+eligibility, availability and source claims; requires acknowledgement of missing,
+stale and conflicting information; and forbids human-verification assertions.
+Synthetic evidence is represented only by an exclusion marker, without its facts
+or raw text. Fixture/mock citations are rejected. Input is limited to 4000 trimmed
+question characters, 30 evidence entries and a 200000-character JSON context.
+Oversized contexts fail rather than silently dropping evidence or caveats.
+
+The provider's **internal** output schema is intentionally narrow:
+
+```json
+{
+  "answer": "Check the recorded requirements with the issuing organisation.",
+  "citationIds": ["evidence-1"],
+  "uncertainties": []
+}
+```
+
+`src/groundedAnswer.ts` validates this JSON and resolves citation IDs to the exact
+supplied source URLs, opportunity titles and record IDs. Unknown or synthetic IDs,
+duplicate IDs, malformed JSON, extra keys (including model-claimed `grounded` or
+verification status), embedded links/citation markers/HTML, and common eligibility
+or verification assurances are rejected. Models cannot supply citation URLs or
+decide grounding. No retrieval or verification status is changed.
+
+Grounding is deliberately conservative: at least one citation is required; every
+cited record must have adequate nonsynthetic evidence; and no unresolved context
+warnings or uncertainties may remain. Adequate means registered, consistent,
+retrieved and supported evidence with no assessment issues or review requirement
+for that record. Otherwise `grounded` is false. Missing citations also make the
+answer general guidance. Required server warnings and uncertainties are retained
+even if the model omits them. They are appended to the plain-text answer along
+with the separate-human-review requirement, and retained in internal audit
+metadata. The final answer, including these additions, must fit 100000 characters.
+
+Frontend compatibility was inspected read-only from the locally cached
+`origin/feature/pharos-frontend` at commit
+`25a0153d205246758004a2a41d7e0537a751ed3c`, specifically
+`src/models/ai.ts`, `src/services/AI_API_CONTRACT.md`, and `src/services/aiClient.ts`.
+That proposal expects `POST /api/ask` with `{ question }` and:
+
+```ts
+interface AIResponse {
+  answer: string
+  citations: { title: string; url: string; recordId?: string }[]
+  grounded: boolean
+}
+```
+
+The backend response type follows that shape and its limits. Internal audit data
+and provider result envelopes are not a new public API. The frontend has no
+warning fields, which is why essential caveats are also included in `answer`.
+No frontend files were modified, no remote fetch was performed, and the proposed
+route remains unimplemented. Reconfirm the proposal when API integration begins.
+
+Internal composition (requires a separately supplied provider):
+
+```ts
+import { generateGroundedAnswer } from './src/groundedAnswer.ts'
+import type { AIProvider } from './src/aiProvider.ts'
+import type { GroundedAnswerRequest } from './src/groundedPrompt.ts'
+
+async function answer(provider: AIProvider, request: GroundedAnswerRequest, signal?: AbortSignal) {
+  const result = await generateGroundedAnswer(provider, request, { signal, timeoutMs: 60000 })
+  // A future route may serialize result.response only after agreeing API/error behavior.
+  return result
+}
+```
+
+Limitations: citation membership and deterministic evidence checks do not prove
+that every generated sentence follows from the cited source, or that it answers
+the question. `grounded` is a backend evidence/citation assessment, not semantic
+entailment or human verification. Instruction/data separation is not a proof of
+prompt-injection immunity. Assurance filtering is conservative and may reject
+benign negations while missing paraphrases or other languages. No model was run,
+so tests verify prompt structure, filtering, mapping and mock behavior, not model
+obedience. No raw text is executed. Trusted server code must supply assessments
+and context; do not accept client-supplied grounding reports as authoritative.
+
+Step 6B should add an Ollama adapter implementing `AIProvider`, with local service
+configuration and the intended Qwen3 1.7B model selected outside the pipeline.
+Map role messages and JSON output, propagate AbortSignal, enforce transport/body
+limits, normalize provider failures, and isolate any reasoning output from the
+final answer. Test with mock Ollama responses before separately authorized live
+local inference. Reassess evidence immediately before generation. Any future
+`/api/ask` route, CORS, disconnect cancellation, availability behavior and public
+error mapping must preserve the inspected frontend contract. Live source access,
+human verification and database storage remain separate; none is enabled here.
+
 ### Deterministic evidence assessment (Step 5)
 
 `src/evidenceAssessment.ts` exports `EvidenceAssessmentService`, configurable
