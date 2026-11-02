@@ -1,9 +1,12 @@
 import { Router } from 'express'
 import type { ApiError } from '../../shared/contract.ts'
 import type { OpportunityStore } from './opportunityStore.ts'
+import type { AskService } from './askService.ts'
+import { createAskRoutes } from './askRoutes.ts'
 
-export function createApiRoutes(store: OpportunityStore) {
+export function createApiRoutes(store: OpportunityStore, askService: AskService) {
   const routes = Router()
+  routes.use('/ask', createAskRoutes(askService))
   routes.get('/health', (_request, response) => {
     response.json({ status: 'ok' })
   })

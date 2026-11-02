@@ -4,12 +4,14 @@ import type { ApiError } from '../../shared/contract.ts'
 import { createOpportunityStore, OpportunityDataError } from './opportunityStore.ts'
 import type { OpportunityStore } from './opportunityStore.ts'
 import { createApiRoutes } from './routes.ts'
+import { AskService } from './askService.ts'
 
-export function createApp(store: OpportunityStore = createOpportunityStore()) {
+export function createApp(store: OpportunityStore = createOpportunityStore(),
+  askService = new AskService({ freshnessPolicy: { maxObservationAgeMs: 0 } })) {
   const app = express()
   app.disable('x-powered-by')
   app.use((_request, response, next) => { response.setHeader('Cache-Control', 'no-store'); next() })
-  app.use('/api', createApiRoutes(store))
+  app.use('/api', createApiRoutes(store, askService))
   app.use((_request, response) => {
     const error: ApiError = { error: { code: 'NOT_FOUND', message: 'Endpoint not found.' } }
     response.status(404).json(error)
