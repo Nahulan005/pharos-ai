@@ -126,6 +126,103 @@ and the separation of source provenance from claim verification.
 
 ## Further development
 
+### Deterministic evidence assessment (Step 5)
+
+`src/evidenceAssessment.ts` exports `EvidenceAssessmentService`, configurable
+`FreshnessPolicy`, and a separate `EvidenceReport`. Input reuses
+`OrganizedOpportunity` plus optional existing `RawEvidence`; additional findings
+reuse `SourceFinding`. `src/assessOrganizedResult.ts` accepts the actual
+`readAndOrganize()` result, preserves failures, and adds a report to successful
+results. Public endpoints, source approvals, the shared contract, and original
+opportunity/evidence records are unchanged.
+
+```ts
+import { EvidenceAssessmentService } from './src/evidenceAssessment.ts'
+import { assessOrganizedResult } from './src/assessOrganizedResult.ts'
+import { readAndOrganize } from './src/readAndOrganize.ts'
+
+const assessor = new EvidenceAssessmentService(
+  // Example application policy only: choose an appropriate age for your use case.
+  { maxObservationAgeMs: 24 * 60 * 60 * 1000, futureToleranceMs: 0 },
+  () => new Date().toISOString(), // Tests inject a fixed ISO timestamp.
+)
+const read = await readAndOrganize({
+  sourceId: 'swayam', method: 'fixture', fixtureId: 'course-v1',
+})
+const result = assessOrganizedResult(read, assessor)
+if (result.ok) console.log(result.value.evidenceReport)
+```
+
+The report separates four concepts:
+
+- `retrieved`: consistent provenance, evidence text and an observation timestamp
+  are recorded. This does not independently prove that a website was visited;
+  fixture retrieval also counts as recorded acquisition.
+- `supported`: known structured claims match recorded evidence with no assessment
+  errors. This means structural support, not factual truth, eligibility, current
+  availability, or semantic proof from arbitrary prose.
+- `needsReview`: one or more errors/warnings exist, including stale or synthetic
+  evidence, missing details, expired/unknown deadlines and third-party sources.
+  Evidence can be structurally supported and still need review.
+- `humanVerified`: always false. No code path records human review or upgrades
+  `Opportunity.verificationStatus`. Claimed reviewer names/dates/statuses trigger
+  `UNRECORDED_HUMAN_VERIFICATION`. A separate authenticated, recorded human-review
+  workflow is required; this engine does not validate or create such actions.
+
+Overall assessment is `insufficient_evidence` if acquisition/provenance is not
+established, otherwise `needs_review` when issues exist, otherwise `supported`.
+Reports contain opportunity/finding IDs, assessment timestamp, the exact policy,
+source references and registry classification, observation ages, deadline state,
+issue codes/paths/severity/messages and review requirements. They remain separate
+from the shared Opportunity contract. No evidence is silently discarded or edited.
+
+Checks reuse `sourceRegistry.ts`, `OpportunityOrganizer`, and the existing shared
+validator. They cover registered identity and URL origin; agreement among the
+opportunity, sidecar, original finding and raw reader provenance; required fields;
+raw byte count, JSON content and original facts; source classification; missing
+eligibility, cost, provider, summary and applicability; and verification assertions.
+Official/provider provenance never proves a claim. Third-party sources always
+receive an issuer-corroboration warning. Fixture/mock raw evidence always receives
+`SYNTHETIC_EVIDENCE`, even if complete. No real offer data was added in this step.
+
+Freshness has **no universal default maximum age**: callers must supply
+`maxObservationAgeMs`. Values must be nonnegative safe integer milliseconds.
+An observation is stale only when its age exceeds the threshold; equality is
+fresh. `futureToleranceMs` defaults to zero and must be explicitly increased to
+permit clock skew. Missing/invalid retrieval times cannot establish acquisition.
+Publication timestamps are optional; when supplied they must be real ISO times,
+not after retrieval or beyond the configured future tolerance. They do not replace
+observation time. The injected clock is read once per assessment; a malformed
+clock or policy throws an explicit configuration error rather than fabricating a
+timestamp. Assessment timestamps never replace original observation timestamps.
+
+Fixed deadlines use real calendar validation and the project's IST convention:
+the entire YYYY-MM-DD date remains valid, expiring at the following midnight in
+UTC+05:30. At exactly that instant the report is `expired`. Unknown and expected
+annual deadlines require review; a rolling deadline is not an availability
+guarantee. No missing dates, fees or eligibility requirements are inferred.
+
+Conflict detection compares explicit structured values in the opportunity and
+its original finding, and among optional additional findings for the same
+opportunity ID. Costs, eligibility text, deadlines, categories, providers and
+other claim fields are compared exactly; states/topics/tags compare as unordered
+sets. Unknown/missing values do not contradict known values. Competing values
+produce `STRUCTURED_CONFLICT`; adding a value absent from the original produces
+`UNSUPPORTED_CLAIM`. No newest-wins rule or automated reconciliation is applied.
+Findings for different opportunity IDs are rejected as mismatches. Differences
+in wording may need manual reconciliation; prose contradictions and entity
+matching across different IDs are not solved by this engine.
+
+Limitations: source registration and internally consistent snapshots do not
+authenticate external content, prove causal support for prose claims, or prove
+that supplied evidence has not been fabricated. Sidecars are in-memory, not an
+audit database or cryptographic attestation. No LLM is used. Content is never
+executed or treated as instructions. Live retrieval remains disabled. Before
+Ollama integration, separately scope authenticated human review and audit storage,
+approved real evidence acquisition, evidence retention/conflict resolution, and
+model-provider contracts that preserve citations and keep deterministic assessment
+authoritative over any generated wording. None of those later stages is activated.
+
 ### Safe Source Reader (Step 4)
 
 `src/sourceReader.ts` defines `SourceReader.read`, the request union, sanitized
