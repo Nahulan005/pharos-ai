@@ -4,12 +4,18 @@ import type { ApiError } from '../../shared/contract.ts'
 import { createOpportunityStore, OpportunityDataError } from './opportunityStore.ts'
 import type { OpportunityStore } from './opportunityStore.ts'
 import { createApiRoutes } from './routes.ts'
+import { createAskRoutes } from './askRoutes.ts'
+import { createLimitedAnswerEngine } from './limitedAnswerEngine.ts'
+import type { AnswerEngine } from './limitedAnswerEngine.ts'
+import { OllamaProvider } from './ollamaProvider.ts'
 
-export function createApp(store: OpportunityStore = createOpportunityStore()) {
+export function createApp(store: OpportunityStore = createOpportunityStore(),
+  answerEngine: AnswerEngine = createLimitedAnswerEngine(new OllamaProvider())) {
   const app = express()
   app.disable('x-powered-by')
   app.use((_request, response, next) => { response.setHeader('Cache-Control', 'no-store'); next() })
   app.use('/api', createApiRoutes(store))
+  app.use('/api', createAskRoutes(answerEngine))
   app.use((_request, response) => {
     const error: ApiError = { error: { code: 'NOT_FOUND', message: 'Endpoint not found.' } }
     response.status(404).json(error)

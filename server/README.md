@@ -1,8 +1,10 @@
 # PHAROS API foundation
 
 Express + TypeScript, using the repository's existing shared contract, fictional
-sample JSON and runtime validator. No AI, database, authentication or scraping is
-implemented. All sample opportunities remain fictional demos, not real offers.
+sample JSON and runtime validator. A limited Ollama-backed AI demo is available
+through `POST /api/ask`; see [setup, contract and limitations](OLLAMA.md).
+No database, authentication or scraping is implemented. All sample opportunities
+remain fictional demos, not real offers.
 
 ## Install and run
 
@@ -31,6 +33,7 @@ Invalid ports fail startup. Ctrl+C stops the server.
 | `GET /api/health` | `{ "status": "ok" }` |
 | `GET /api/opportunities` | The unchanged shared `OpportunityListResponse`: `{ schemaVersion, generatedAt, items }` |
 | `GET /api/opportunities/:id` | One shared `Opportunity` object |
+| `POST /api/ask` | `{ answer, citations: [], grounded: false }` in limited demo mode |
 
 `GET /api/opportunities/` is an alias for the list. The ID lookup uses `/:id`
 (the task's trailing-slash lookup was interpreted as a missing ID placeholder).
@@ -512,7 +515,7 @@ is injectable for tests and can be replaced with another validated data source
 later. Reuse the shared validator rather than duplicating its enum rules.
 
 The frontend still uses its existing service; this step does not connect it.
-Cross-origin browser integration/CORS is not configured yet. The `/api/ask`
-endpoint, Ollama/Qwen3 providers, research engine, persistent storage and source
-verification are future stages. Agree those API contracts before integration.
+Cross-origin browser integration/CORS is not configured yet. The limited `/api/ask`
+endpoint and Ollama/Qwen3 adapter are described in [OLLAMA.md](OLLAMA.md).
+The research engine, persistent storage and source verification remain future stages.
 This is a local development foundation, not a production deployment setup.
