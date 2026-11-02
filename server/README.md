@@ -126,6 +126,100 @@ and the separation of source provenance from claim verification.
 
 ## Further development
 
+### Safe Source Reader (Step 4)
+
+`src/sourceReader.ts` defines `SourceReader.read`, the request union, sanitized
+error codes, and raw evidence. It supports local `fixture` mode and future HTTP
+`web_fetch`/`api` methods. Retrieval is never verification. No endpoint is changed;
+the API continues to serve the existing fictional demo dataset.
+
+`FixtureSourceReader` reads an explicit in-memory manifest from
+`fixtures/sourceFindings.ts`. Fixture IDs are lookup keys, never filesystem paths.
+The included course observation is clearly synthetic, not a real offer or a
+record of a website visit. It has a fixed finding ID, URL and timestamp. Every
+read parses a fresh copy and validates it with the existing organizer. Unknown
+sources, missing fixture IDs, source mismatches and malformed findings return
+structured errors. Fixture mode does not grant automated website access.
+
+```ts
+import { readAndOrganize } from './src/readAndOrganize.ts'
+
+const result = await readAndOrganize({
+  sourceId: 'swayam', method: 'fixture', fixtureId: 'course-v1',
+})
+if (result.ok) {
+  // In-memory only. This synthetic record must not be published as a real offer.
+  console.log(result.value.opportunity)
+  console.log(result.value.evidence, result.value.rawEvidence)
+} else {
+  console.log(result.stage) // reader or organizer
+}
+```
+
+`readAndOrganize` accepts an injected reader, passes its finding to
+`OpportunityOrganizer`, and returns the organized opportunity together with both
+evidence structures. Original source IDs, URLs and timestamps are retained.
+Raw evidence also records mode, method, fixture ID (if applicable), media type,
+byte count and exact text. All Step 4 raw evidence has `synthetic: true`, including
+mock HTTP output. These records remain `unreviewed`, with null human-verification
+fields. The existing shared contract cannot hold the additional provenance, so
+it remains in backend sidecars.
+
+`HttpSourceReader` is a restricted **mock-only foundation**, not a live fetcher.
+There is no default transport, no `fetch` fallback, and no production DNS/HTTP
+implementation. Existing registry entries are unchanged and all deny access
+before DNS or transport calls. Even simulated future access requires both:
+
+- A matching registered source with `approved` status, valid review date, and
+  permission for the requested method.
+- A source-specific `HttpApproval` containing the method, exact hostname and
+  exact URL (including path/query); the URL must also match the registry origin.
+
+Additional enforced checks:
+
+- HTTPS only; no credentials, fragments, nonstandard ports, local hostnames or
+  IP-literal URLs. No implicit subdomain approval or URL wildcards.
+- Resolve once through the mock adapter; reject the entire answer set if any
+  address is private, loopback, link-local, shared, reserved, or otherwise outside
+  the conservative public-IPv4 policy. IPv6 is entirely disabled.
+- Require the `pinned-ip-tls-no-redirects-v1` mock transport contract, pass a single
+  validated address and TLS server name, and reject peer-address mismatches.
+  Missing binding support fails closed. No second resolution is requested.
+- Reject all 3xx responses, Location headers and changed final URLs. No redirects
+  are followed, including same-host redirects.
+- Accept only UTF-8 JSON (`application/json`, optional `charset=utf-8`), with no
+  compression. Enforce declared and streamed byte limits: default 256 KiB, hard
+  configuration cap 1 MiB. Reject mismatched lengths, invalid UTF-8 and invalid JSON.
+- One deadline covers DNS, response headers and streamed body: default 5 seconds,
+  maximum configuration 30 seconds. Abort on timeout and completion/failure;
+  delayed DNS completion cannot initiate a connection after timeout.
+- Return fixed error messages; internal exceptions, addresses, paths and raw
+  transport errors are not exposed through error results.
+
+The mock JSON format accepts only `{ facts, publishedAt? }`. Facts use the
+existing SourceFinding shape; no metadata or verification overrides are accepted.
+The reader captures retrieval time through an injectable clock, computes a stable
+SHA-256 finding ID from source/method/URL/body, retains raw text, and validates the
+finding with the organizer. Content is parsed as data, never executed or treated
+as instructions. HTML extraction and arbitrary website parsing are not implemented.
+
+**Security boundary and limitations:** injected registry lookups, approvals,
+clocks and transports are trusted application/test dependencies, not API inputs.
+A mock capability declaration and response peer metadata cannot prove real socket
+security. For that reason only `kind: 'mock'` is accepted, and no live adapter is
+shipped. Before live access, implement and audit socket binding to the validated
+IP, TLS hostname/certificate verification, proxy avoidance, redirect suppression,
+stream limits and cancellation/resource cleanup. Do not substitute ordinary fetch
+after a separate DNS check: that would reopen DNS-rebinding risk. Aborting an
+uncooperative injected mock cannot forcibly stop its internals. Tests prove policy
+and mock interactions, not production TLS or network-stack behavior.
+
+All reader tests use local fixtures or injected in-memory DNS/HTTP mocks. Existing
+API regression tests use ephemeral loopback HTTP only. No external site is read.
+Step 5 remains separately scoped: source-policy review and approval, an audited
+live transport, source-specific structured parsers, and any requested persistence
+or API wiring. No scraping, LLM integration, database, or source approval is added.
+
 ### Information Organizer
 
 `src/sourceFinding.ts` defines `SourceFinding`, `OpportunityEvidence`, and the
