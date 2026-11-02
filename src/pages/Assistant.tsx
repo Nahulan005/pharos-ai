@@ -5,9 +5,8 @@ import { createAssistantChat } from '../lib/assistantChat'
 import { aiClient, MAX_QUESTION_LENGTH } from '../services/aiClient'
 
 const prompts = [
-  'What should I verify before applying for a student scholarship?',
-  'Help me compare the prerequisites for web development and machine learning.',
-  'How can I evaluate whether a free course is useful for my goals?',
+  'Help me plan my career',
+  'How can I learn JavaScript?',
 ]
 
 export default function Assistant() {
