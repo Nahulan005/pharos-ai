@@ -18,7 +18,7 @@ export type GenerationResult = { ok: true; value: GenerationResponse }
 export interface AIProvider {
   readonly providerId: string
   readonly modelId: string
-  /** Adapters must propagate signal and return typed failures; no adapter ships in Step 6A. */
+  /** Adapters must propagate signal and return typed failures; importing one must not perform I/O. */
   generate(request: GenerationRequest): Promise<GenerationResult>
 }
 export interface GenerationOptions { timeoutMs?: number; signal?: AbortSignal }

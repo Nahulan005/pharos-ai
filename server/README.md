@@ -126,6 +126,96 @@ and the separation of source provenance from claim verification.
 
 ## Further development
 
+### Ollama adapter (Step 6B: mocked verification only)
+
+`src/ollamaProvider.ts` implements the existing `AIProvider` contract. It defaults
+to provider `ollama`, model `qwen3:1.7b`, and origin `http://127.0.0.1:11434`.
+Model ID, loopback origin, output-token budget and response-byte cap are constructor
+options. The HTTP dependency is mandatory: tests supply an in-memory mock, while
+an explicitly enabled live caller can supply `globalThis.fetch`. Importing or
+constructing the adapter never connects to a service. Nothing installs Ollama,
+pulls a model, starts a server, or registers an endpoint.
+
+```ts
+import { OllamaProvider } from './src/ollamaProvider.ts'
+import { generateGroundedAnswer } from './src/groundedAnswer.ts'
+
+// Live construction example only; use an injected mock in automated tests.
+const provider = new OllamaProvider({ fetch: globalThis.fetch, modelId: 'qwen3:1.7b' })
+// await generateGroundedAnswer(provider, groundedRequest, { timeoutMs: 60000, signal })
+```
+
+The adapter follows the [Ollama chat API](https://docs.ollama.com/api/chat): one
+POST to `/api/chat`, role-separated messages, `stream: false`, `format: 'json'`,
+`think: false`, temperature zero, and a bounded output-token budget (default 2048,
+configurable 1–8192). No tools, automatic retries, model fallback or management
+requests are sent. Zero temperature does not establish model reliability or make
+the full inference stack deterministic.
+
+The [thinking protocol](https://docs.ollama.com/capabilities/thinking) separates
+reasoning from final content. Only `message.content` is returned. Any separate
+`message.thinking` is discarded; inline `<think>` blocks are rejected rather than
+stripped or exposed. The adapter requires assistant-role output, matching model
+identity, `done: true`, and a recognized completion reason. Completed content must
+be a JSON object; final schema, citation and grounding checks remain in Step 6A.
+Token-limit completion maps to `finishReason: 'length'`, which the existing provider
+wrapper rejects instead of serving a partial answer. Tool calls are rejected.
+
+Transport protections and error behavior:
+
+- Only loopback HTTP(S) origins are accepted: `127.0.0.1`, `::1`, or `localhost`
+  normalized to `127.0.0.1`. Credentials, query strings, fragments, remote hosts
+  and base paths are rejected. This adapter is intentionally local-only.
+- Redirects are disabled, and redirected responses or changed response URLs are
+  rejected. No cookies or authorization credentials are attached.
+- UTF-8 JSON responses only; HTML, NDJSON, invalid UTF-8, compressed responses,
+  malformed envelopes and misleading Content-Length values are rejected.
+- Default response cap is 512 KiB, configurable up to 1 MiB; both declared length
+  and actual streamed bytes are checked before decoding. Request JSON is capped
+  at 1 MiB. Final content also obeys the existing provider/answer limits.
+- The supplied 1–300000 ms deadline covers connection/headers and body reading.
+  AbortSignal propagates to HTTP, cancellation/timeout cancels the response body,
+  late responses are discarded, and timers/listeners are cleaned up.
+- Following the [Ollama error envelope](https://docs.ollama.com/api/errors), server
+  error text is never exposed. Missing models (404), overload (429), service
+  unavailability (502/503/504), connection failures and stream failures map to
+  sanitized `UNAVAILABLE`. Other unsuccessful status codes and error envelopes
+  map to `PROVIDER_ERROR`; invalid responses map to `INVALID_RESPONSE`.
+
+Tests in `tests/ollamaProvider.test.ts` inject every HTTP response, including
+timeout, cancellation, refused connection, missing model, byte limits, malformed
+JSON, reasoning separation, and grounded-pipeline cases. They never call native
+fetch, probe a local port, invoke an Ollama executable, or require installed models.
+The full backend suite still includes its existing ephemeral loopback API tests.
+**Mocked test success is not evidence of real Qwen3 execution, model quality,
+hardware suitability, or compatibility with a particular installed Ollama version.**
+
+Optional manual smoke test, only for another developer who already has Ollama
+running locally and `qwen3:1.7b` installed. From `server/`:
+
+```sh
+node --import tsx src/ollamaSmokeTest.ts --run
+```
+
+This command intentionally performs a **live** request through the adapter and
+the grounded-answer validator, with a 120-second timeout and Ctrl+C cancellation.
+It supplies no opportunity evidence, so a successful answer must be ungrounded
+general guidance with no citations. It prints a LIVE banner and only the final
+validated response, never reasoning. It exits unsuccessfully on a provider or
+validation failure. A validation failure can mean model-output policy/schema
+failure even when the service is reachable. The script does not install, download
+or start anything; without `--run` it performs no request. It is not included in
+`npm test` and was not executed during Step 6B development.
+
+Remaining limitations: transport cancellation cannot guarantee that a server
+immediately stops computing; native fetch behavior and real inference need the
+optional manual check on a prepared machine. A trusted local Ollama service is
+assumed. Context-window sizing, output quality and JSON adherence need evaluation
+with the intended model; no model output is factual or human verification. The
+adapter does not reconfigure proxy settings, discover server capabilities, or
+silently downgrade for older protocols. No `/api/ask` route, frontend wiring,
+live website access, database, or human-review workflow is enabled by this step.
+
 ### Model-independent provider contract and grounded answers (Step 6A)
 
 No model transport or public endpoint is added. `src/aiProvider.ts` defines
