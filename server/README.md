@@ -126,6 +126,75 @@ and the separation of source provenance from claim verification.
 
 ## Further development
 
+### Information Organizer
+
+`src/sourceFinding.ts` defines `SourceFinding`, `OpportunityEvidence`, and the
+typed success/error result. `src/opportunityOrganizer.ts` exports
+`OpportunityOrganizer`. It is a pure, offline transformation; existing endpoints
+continue serving the unchanged sample data. No dependencies were added.
+
+```ts
+import { OpportunityOrganizer } from './src/opportunityOrganizer.ts'
+import type { SourceFinding } from './src/sourceFinding.ts'
+
+// Illustration only, not a real course or a retrieved website finding.
+const finding: SourceFinding = {
+  findingId: 'example-observation',
+  sourceId: 'swayam',
+  sourceUrl: 'https://swayam.gov.in/example',
+  retrievedAt: '2026-11-02T10:00:00+05:30',
+  facts: { id: 'example-course', category: 'course_cert', title: 'Example course' },
+}
+const result = new OpportunityOrganizer().organize(finding)
+if (result.ok) {
+  console.log(result.value.opportunity, result.value.evidence)
+} else {
+  console.log(result.errors) // field path, stable error code, useful message
+}
+```
+
+Required input: finding ID, registered source ID, source URL, retrieval timestamp,
+and facts containing opportunity ID, category and title. Optional facts use the
+existing Opportunity types. Optional `publishedAt` is a complete ISO timestamp;
+`evidenceText` retains supplied supporting text. The organizer does not extract
+facts from that text or decide whether its claims are true.
+
+The organizer checks source ID, exact URL origin and registered category scope,
+then maps facts to an Opportunity. Source name/type come from the registry, never
+from caller assertions. Missing/null cost becomes `unknown`; absent deadline and
+applicability become unknown objects; missing topics/tags become empty arrays.
+Provider, summary and eligibility are required strings in the shared contract,
+so missing values use the literal `unknown`. Required identity/title/category
+cannot be guessed. Supplied malformed values are rejected, not coerced.
+
+Every output is checked by the existing shared runtime validator. Its timestamp
+validation is also reused for original retrieval/publication timestamps. Fixed
+deadlines require real calendar dates; past dates remain unchanged. Non-fixed
+deadlines cannot carry exact dates (annual expectations belong in the note).
+Publication after retrieval and inconsistent geographic scope are rejected.
+Only omitted or explicit `unreviewed` verification status is accepted. Human
+verification assertions and metadata overrides are errors; output always has
+`verificationStatus: 'unreviewed'`, `verifiedBy: null`, `lastVerifiedAt: null`.
+
+`organizeMany` validates a batch atomically. Repeated opportunity IDs or finding
+IDs are conflicts, including identical duplicates: no silent overwrite or
+automatic reconciliation. Failures return errors without partial records.
+Conflicts are checked structurally; detecting contradictions within prose or
+recognizing the same opportunity under different IDs requires later work.
+
+The shared contract has no source ID, finding ID, retrieval/publication timestamp,
+raw evidence, or multi-source provenance fields. A detached evidence sidecar
+stores these alongside `opportunityId` and an original finding snapshot. Original
+URLs/timestamps are preserved verbatim. This is in-memory output, not persistent
+storage. Do not drop the evidence when persisting or reconciling records later.
+
+The future Source Reader must obtain findings through explicitly reviewed,
+permitted methods, enforce registry access policies and redirect/scope/network
+restrictions, capture actual URLs/timestamps/evidence, and supply stable IDs and
+explicit facts. Organizer acceptance is not retrieval permission or factual
+verification. All automated retrieval remains disabled. Storage, reconciliation,
+human verification, API integration and LLM providers remain separate stages.
+
 Continue on `feature/pharos-functions`. Preserve existing work and coordinate
 changes to the shared contract with the frontend owner. `src/app.ts` builds the
 application without opening a port; `src/index.ts` starts it; `src/routes.ts`
