@@ -1,5 +1,6 @@
 import type { AIClient, AIResponse, AskOptions } from '../models/ai'
 import { safeSourceUrl } from '../lib/opportunities'
+import type { StudentProfile } from '../models/studentProfile'
 
 export class AIUnavailableError extends Error {
   constructor() { super('PHAROS AI Research is not connected yet.'); this.name = 'AIUnavailableError' }
@@ -89,3 +90,27 @@ export function createAIClient(baseUrl?: string, fetcher: typeof fetch = (...arg
 
 export const aiClient = createAIClient(import.meta.env.VITE_API_BASE_URL)
 export const ask = (question: string, options?: AskOptions) => aiClient.ask(question, options)
+
+/** Same-origin PHAROS API through the existing /api proxy. No defaults are sent as saved preferences. */
+export async function explainOpportunity(id: string, profile: StudentProfile | null, signal?: AbortSignal): Promise<AIResponse> {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new AIRequestError('server', 'Invalid opportunity ID.')
+  const requestSignal = AbortSignal.any([AbortSignal.timeout(35_000), ...(signal ? [signal] : [])])
+  try {
+    requestSignal.throwIfAborted()
+    const response = await fetch(`/api/opportunities/${id}/explanation`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      credentials: 'omit', redirect: 'error', signal: requestSignal,
+      body: JSON.stringify({ profile: { careerInterests: profile?.careerInterests ?? [],
+        skills: profile?.skills ?? [], weeklyLearningHours: profile?.weeklyLearningHours ?? null } }),
+    })
+    if (!response.ok) throw new AIRequestError('server', 'The explanation could not be loaded. Check that the backend is running and try again.')
+    const result = parseAIResponse(await response.json())
+    if (result.grounded || result.citations.length) throw invalidResponse()
+    return result
+  } catch (error) {
+    if (signal?.aborted) throw new AIRequestError('cancelled', 'Explanation cancelled.')
+    if (requestSignal.aborted) throw new AIRequestError('timeout', 'The explanation timed out. Try again.')
+    if (error instanceof AIRequestError) throw error
+    throw new AIRequestError('network', 'Could not load an explanation. Check the backend connection and try again.')
+  }
+}

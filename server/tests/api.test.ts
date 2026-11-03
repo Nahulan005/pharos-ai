@@ -6,6 +6,7 @@ import type { AddressInfo } from 'node:net'
 import { createApp } from '../src/app.ts'
 import { createOpportunityStore } from '../src/opportunityStore.ts'
 import type { OpportunityStore } from '../src/opportunityStore.ts'
+import { validateOpportunities } from '../../shared/validateOpportunities.mjs'
 
 const sampleText = await readFile(new URL('../../shared/opportunities.sample.json', import.meta.url), 'utf8')
 const sample = JSON.parse(sampleText)
@@ -28,7 +29,7 @@ test('health returns JSON and does not depend on opportunity availability', asyn
     assert.equal(response.headers.get('x-powered-by'), null)
   }, createOpportunityStore(async () => { throw new Error('private filesystem failure') }))
 })
-test('list and trailing slash return the exact validated shared envelope and fictional records', async () => {
+test('list and trailing slash return four researched candidates with exact official URLs and no verification claims', async () => {
   await withApi(async base => {
     for (const path of ['/api/opportunities', '/api/opportunities/']) {
       const response = await fetch(base + path)
@@ -36,8 +37,42 @@ test('list and trailing slash return the exact validated shared envelope and fic
       assert.deepEqual(await response.json(), sample)
       assert.equal(response.headers.get('cache-control'), 'no-store')
     }
-    assert.equal(sample.items.length, 3)
-    assert.ok(sample.items.every((item: { verificationStatus: string; title: string }) => item.verificationStatus === 'demo' && item.title.startsWith('[DEMO]')))
+    assert.deepEqual(validateOpportunities(sample), [])
+    assert.equal(sample.items.length, 4)
+    assert.deepEqual(sample.items.map((item: { sourceUrl: string }) => item.sourceUrl), [
+      'https://nptel.ac.in/courses/106102576',
+      'https://nptel.ac.in/courses/106106182',
+      'https://scholarships.gov.in/public/schemeGuidelines/CSSS_GUIDLINES_07022024_updated.pdf',
+      'https://scholarships.gov.in/public/schemeGuidelines/DEPDGuidelines_1.pdf',
+    ])
+    for (const item of sample.items) {
+      assert.equal(item.verificationStatus, 'unreviewed')
+      assert.equal(item.sourceType, 'official')
+      assert.equal(item.verifiedBy, null)
+      assert.equal(item.lastVerifiedAt, null)
+      if (item.id === 'nptel-joy-of-computing-using-python') {
+        assert.equal(item.provider, 'NPTEL / IIT Ropar')
+        assert.equal(item.cost, 'free_to_learn_paid_cert')
+        assert.match(item.summary, /Archived course information/)
+        assert.match(item.summary, /certification requires an optional paid examination/)
+        assert.match(item.summary, /Current session terms and exam fees need review/)
+        assert.match(item.summary, /current enrollment availability is unconfirmed/)
+      } else {
+        assert.equal(item.cost, 'unknown')
+      }
+      assert.equal(item.eligibilitySummary, 'unknown')
+      assert.equal(item.deadline.type, 'unknown')
+      assert.equal(item.deadline.date, null)
+      assert.doesNotMatch(item.title, /\[DEMO\]|fictional/i)
+      assert.ok(['course_cert', 'scholarship'].includes(item.category))
+      if (item.category === 'course_cert') {
+        assert.match(item.summary, /^Enrollment was previously reported closed/)
+        assert.match(item.deadline.note, /previously reported closed/)
+      } else {
+        assert.match(item.deadline.note, /Fresh-application deadline is unknown/)
+        assert.match(item.deadline.note, /Renewal deadlines must not be treated as fresh-application deadlines/)
+      }
+    }
   })
 })
 test('lookup returns each exact record', async () => {
@@ -60,12 +95,12 @@ for (const [name, read] of [
   ['malformed JSON', async () => '{private-invalid-json'],
   ['invalid schema', async () => JSON.stringify({ ...sample, schemaVersion: 99 })],
   ['missing field', async () => { const data = structuredClone(sample); delete data.items[0].title; return JSON.stringify(data) }],
-  ['false demo verification', async () => { const data = structuredClone(sample); data.items[0].verifiedBy = 'not-allowed'; return JSON.stringify(data) }],
+  ['false unreviewed verification', async () => { const data = structuredClone(sample); data.items[0].verifiedBy = 'not-allowed'; return JSON.stringify(data) }],
   ['read failure', async () => { throw new Error('secret/path/password') }],
 ] as const) {
   test(`${name}: list and lookup fail closed without exposing internals`, async () => {
     await withApi(async base => {
-      for (const path of ['/api/opportunities', '/api/opportunities/demo-scholarship']) {
+      for (const path of ['/api/opportunities', `/api/opportunities/${sample.items[0].id}`]) {
         const response = await fetch(base + path)
         assert.equal(response.status, 503)
         assert.deepEqual(await response.json(), { error: { code: 'OPPORTUNITY_DATA_UNAVAILABLE', message: 'Opportunity data is temporarily unavailable.' } })

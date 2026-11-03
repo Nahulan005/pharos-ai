@@ -5,6 +5,7 @@ import { useClock, useResource } from '../hooks/useResource'
 import { applicabilityLabel, categoryLabels, costLabels, deadlineLabel, formatDate, safeSourceUrl, sourceLabels, topicLabels, verificationLabels } from '../lib/opportunities'
 import { DemoNotice, ErrorState, LoadingState, NotFound } from '../components/States'
 import { Icon } from '../components/Icon'
+import { OpportunityExplanation } from '../components/OpportunityExplanation'
 
 export default function OpportunityDetails() {
   const { id = '' } = useParams()
@@ -25,6 +26,7 @@ function DetailContent({ id }: { id: string }) {
     <header className="detail-heading"><p className="eyebrow">{categoryLabels[item.category]}</p><div className="card-badges">{item.verificationStatus === 'demo' && <span className="badge badge-demo">[DEMO] · Fictional opportunity</span>}<span className="badge">{costLabels[item.cost]}</span></div><h1>{item.title}</h1><p>{item.provider}</p></header>
     {item.verificationStatus === 'demo' && <DemoNotice />}
     <div className="details-grid"><div className="detail-main">
+      <OpportunityExplanation id={item.id} />
       <section className="detail-panel"><h2>About this opportunity</h2><p>{item.summary}</p><div className="topic-list">{item.topics.map(topic => <span className="badge" key={topic}>{topicLabels[topic]}</span>)}</div></section>
       <section className="detail-panel"><h2>Who it’s for</h2><p>{item.eligibilitySummary}</p><dl className="facts-list"><div><dt>Applicability</dt><dd>{applicabilityLabel(item)}</dd></div><div><dt>Cost</dt><dd>{costLabels[item.cost]}</dd></div></dl><p className="small-note">Applicability describes the recorded scope, not a decision about your personal eligibility.</p></section>
       <section className="detail-panel"><h2>Dates & timing</h2><p className="deadline-detail"><Icon name="clock" />{deadlineLabel(item.deadline, now)}</p>{item.deadline.note && <p>{item.deadline.note}</p>}<p className="small-note">Fixed deadlines are valid through the end of the stated date in India (IST). A deadline that has not passed does not guarantee applications are open. Rolling and expected annual dates must be confirmed with the provider.</p></section>

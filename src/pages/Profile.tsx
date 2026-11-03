@@ -144,7 +144,7 @@ export default function Profile() {
 
     <div className="notice profile-privacy">
       <Icon name="shield" />
-      <p><strong>Stored in your browser, under your control.</strong> Preferences stay on this browser and site. They aren’t sent to a server or synced between devices. Anyone using this browser can access them.</p>
+      <p><strong>Stored in your browser, under your control.</strong> Preferences are saved on this browser and site, not synced between devices. If you request an opportunity explanation, your saved interests, skills and weekly learning hours are sent to the PHAROS backend and its AI service. Anyone using this browser can access saved preferences.</p>
     </div>
     {storageWarning && <div className="profile-message is-warning" role="alert"><Icon name="info" /><p>{storageWarning}</p></div>}
 

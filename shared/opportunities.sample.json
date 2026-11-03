@@ -1,41 +1,15 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-31T17:40:06Z",
+  "generatedAt": "2026-11-03T06:13:37Z",
   "items": [
     {
-      "id": "demo-scholarship",
-      "category": "scholarship",
-      "title": "[DEMO] Fictional Student Scholarship",
-      "provider": "Fictional Demo Scholarship Provider",
-      "summary": "Fictional scholarship used only to demonstrate the PHAROS data structure. This is not a real offer.",
-      "cost": "unknown",
-      "eligibilitySummary": "Eligibility is unspecified for this fictional example.",
-      "applicability": {
-        "scope": "unknown",
-        "states": []
-      },
-      "deadline": {
-        "type": "unknown",
-        "date": null,
-        "note": null
-      },
-      "sourceName": null,
-      "sourceUrl": null,
-      "sourceType": "unknown",
-      "verificationStatus": "demo",
-      "lastVerifiedAt": null,
-      "verifiedBy": null,
-      "topics": ["general"],
-      "tags": ["demo", "fictional", "scholarship"]
-    },
-    {
-      "id": "demo-free-course",
+      "id": "nptel-introduction-to-large-language-models",
       "category": "course_cert",
-      "title": "[DEMO] Fictional Free Web Development Course",
-      "provider": "Fictional Demo Course Provider",
-      "summary": "Fictional free web development course used only to demonstrate the PHAROS data structure. This is not a real offer.",
-      "cost": "free",
-      "eligibilitySummary": "Eligibility is unspecified for this fictional example.",
+      "title": "Introduction to Large Language Models",
+      "provider": "NPTEL",
+      "summary": "Enrollment was previously reported closed; current enrollment availability is unconfirmed. NPTEL course listing on large language models. Researched candidate, not a verified active offering.",
+      "cost": "unknown",
+      "eligibilitySummary": "unknown",
       "applicability": {
         "scope": "unknown",
         "states": []
@@ -43,25 +17,25 @@
       "deadline": {
         "type": "unknown",
         "date": null,
-        "note": null
+        "note": "Enrollment was previously reported closed. No current enrollment window or deadline has been confirmed; check the official source."
       },
-      "sourceName": null,
-      "sourceUrl": null,
-      "sourceType": "unknown",
-      "verificationStatus": "demo",
+      "sourceName": "NPTEL",
+      "sourceUrl": "https://nptel.ac.in/courses/106102576",
+      "sourceType": "official",
+      "verificationStatus": "unreviewed",
       "lastVerifiedAt": null,
       "verifiedBy": null,
-      "topics": ["web_dev"],
-      "tags": ["demo", "fictional", "course"]
+      "topics": ["ai_ml"],
+      "tags": ["nptel", "large-language-models", "researched-candidate"]
     },
     {
-      "id": "demo-student-software-benefit",
-      "category": "software_perk",
-      "title": "[DEMO] Fictional Student Software Benefit",
-      "provider": "Fictional Demo Software Provider",
-      "summary": "Fictional student software benefit used only to demonstrate the PHAROS data structure. This is not a real offer.",
-      "cost": "unknown",
-      "eligibilitySummary": "Student eligibility requirements are unspecified for this fictional example.",
+      "id": "nptel-joy-of-computing-using-python",
+      "category": "course_cert",
+      "title": "The Joy of Computing using Python",
+      "provider": "NPTEL / IIT Ropar",
+      "summary": "Enrollment was previously reported closed; current enrollment availability is unconfirmed. Taught by Prof. Sudarshan Iyengar. Archived course information covers Python programming through practical examples, including variables, loops, lists, sorting and searching. Learning content is free; certification requires an optional paid examination. Current session terms and exam fees need review. Researched candidate, not a verified active offering.",
+      "cost": "free_to_learn_paid_cert",
+      "eligibilitySummary": "unknown",
       "applicability": {
         "scope": "unknown",
         "states": []
@@ -69,16 +43,68 @@
       "deadline": {
         "type": "unknown",
         "date": null,
-        "note": null
+        "note": "Enrollment was previously reported closed. No current enrollment window or deadline has been confirmed; check the official source."
       },
-      "sourceName": null,
-      "sourceUrl": null,
-      "sourceType": "unknown",
-      "verificationStatus": "demo",
+      "sourceName": "NPTEL",
+      "sourceUrl": "https://nptel.ac.in/courses/106106182",
+      "sourceType": "official",
+      "verificationStatus": "unreviewed",
       "lastVerifiedAt": null,
       "verifiedBy": null,
       "topics": ["general"],
-      "tags": ["demo", "fictional", "student-software"]
+      "tags": ["nptel", "python", "researched-candidate"]
+    },
+    {
+      "id": "nsp-central-sector-college-university-scholarship",
+      "category": "scholarship",
+      "title": "Central Sector Scheme of Scholarship for College and University Students",
+      "provider": "Ministry of Education, Government of India",
+      "summary": "Scholarship scheme for college and university study described in official NSP-hosted guidelines. Researched candidate; current application availability has not been confirmed.",
+      "cost": "unknown",
+      "eligibilitySummary": "unknown",
+      "applicability": {
+        "scope": "unknown",
+        "states": []
+      },
+      "deadline": {
+        "type": "unknown",
+        "date": null,
+        "note": "Fresh-application deadline is unknown. Renewal deadlines must not be treated as fresh-application deadlines; confirm the applicable cycle on NSP."
+      },
+      "sourceName": "National Scholarship Portal (NSP)",
+      "sourceUrl": "https://scholarships.gov.in/public/schemeGuidelines/CSSS_GUIDLINES_07022024_updated.pdf",
+      "sourceType": "official",
+      "verificationStatus": "unreviewed",
+      "lastVerifiedAt": null,
+      "verifiedBy": null,
+      "topics": ["general"],
+      "tags": ["nsp", "scholarship", "researched-candidate"]
+    },
+    {
+      "id": "nsp-post-matric-scholarship-students-with-disabilities",
+      "category": "scholarship",
+      "title": "Post-Matric Scholarship for Students with Disabilities",
+      "provider": "Department of Empowerment of Persons with Disabilities, Government of India",
+      "summary": "Post-matric scholarship scheme for students with disabilities described in official NSP-hosted guidelines. Researched candidate; current application availability has not been confirmed.",
+      "cost": "unknown",
+      "eligibilitySummary": "unknown",
+      "applicability": {
+        "scope": "unknown",
+        "states": []
+      },
+      "deadline": {
+        "type": "unknown",
+        "date": null,
+        "note": "Fresh-application deadline is unknown. Renewal deadlines must not be treated as fresh-application deadlines; confirm the applicable cycle on NSP."
+      },
+      "sourceName": "National Scholarship Portal (NSP)",
+      "sourceUrl": "https://scholarships.gov.in/public/schemeGuidelines/DEPDGuidelines_1.pdf",
+      "sourceType": "official",
+      "verificationStatus": "unreviewed",
+      "lastVerifiedAt": null,
+      "verifiedBy": null,
+      "topics": ["general"],
+      "tags": ["nsp", "scholarship", "disability", "researched-candidate"]
     }
   ]
 }

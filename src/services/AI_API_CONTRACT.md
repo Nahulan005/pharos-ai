@@ -1,5 +1,23 @@
 # Proposed PHAROS research API — pending backend-owner agreement
 
+## Opportunity detail explanation (implemented separately from general ask)
+
+`POST /api/opportunities/:id/explanation` uses the existing same-origin `/api`
+proxy. Body: `{ "profile": { "careerInterests": [], "skills": [], "weeklyLearningHours": null } }`.
+Only saved values for these three fields are sent on explicit button activation;
+unsaved/default profiles send empty preferences. No other profile fields are sent.
+The backend loads the selected record from its validated opportunity store.
+
+The response uses the existing `answer`, `citations`, `grounded` shape. Ollama
+selects allowed relevance-statement IDs; the backend renders deterministic wording.
+Unreviewed records retain a mandatory warning. No evidence assessment is invented:
+`grounded` is false and `citations` is empty. The detail page retains its source link.
+Provider failure or rejected output returns a clearly labelled deterministic
+explanation. Invalid requests return 400; absent records return 404; store failures
+return 503. Backend inference times out after 30 seconds; the browser aborts after
+35 seconds. Cancellation/navigation propagates abort and suppresses stale output.
+This does not change the general `/api/ask` behavior documented below.
+
 This is a frontend proposal, not an implemented server or a shared contract change.
 The Node.js backend owner must confirm or adjust it before integration. Ollama +
 Qwen3 must run behind that backend; the browser never calls Ollama directly.

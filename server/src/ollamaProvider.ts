@@ -38,7 +38,10 @@ export class OllamaProvider implements AIProvider {
   }
 
   private async chat(request: GenerationRequest): Promise<GenerationResult> {
-    if (!this.endpoint) return providerFailure('UNAVAILABLE')
+    if (!this.endpoint) {
+      console.warn('[PHAROS Ollama] INVALID_CONFIGURATION')
+      return providerFailure('UNAVAILABLE')
+    }
     let response: Response
     try {
       response = await this.fetcher(this.endpoint, {
@@ -47,9 +50,14 @@ export class OllamaProvider implements AIProvider {
         body: JSON.stringify({ model: this.modelId, messages: request.messages,
           stream: false, format: 'json', think: false, options: { temperature: 0, num_predict: 768 } }),
       })
-    } catch { return providerFailure('UNAVAILABLE') }
+    } catch {
+      // Fixed categories only: never log request data, URLs, exceptions or response bodies.
+      console.warn('[PHAROS Ollama]', request.signal.aborted ? 'REQUEST_ABORTED' : 'CONNECTION_FAILURE')
+      return providerFailure('UNAVAILABLE')
+    }
     // Never return or log Ollama error bodies, reasoning, prompts or transport exceptions.
     if (!response.ok) {
+      console.warn('[PHAROS Ollama] HTTP_FAILURE', response.status)
       await response.body?.cancel().catch(() => {})
       return providerFailure(response.status >= 500 ? 'UNAVAILABLE' : 'PROVIDER_ERROR')
     }
