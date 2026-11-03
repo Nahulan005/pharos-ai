@@ -24,11 +24,20 @@ Qwen3 must run behind that backend; the browser never calls Ollama directly.
 
 ## Configuration and request
 
-Set the Vite environment variable `VITE_API_BASE_URL` to the PHAROS Node.js backend
-base URL, for example `http://localhost:3000`, then restart Vite (or rebuild for
-production). The client appends `/api/ask`; a path prefix is supported. Do not set
-this to an Ollama URL. This public configuration must never contain API keys or
-credentials. Missing or invalid configuration disables sending.
+The default endpoint is same-origin `/api/ask`; `VITE_API_BASE_URL` may be unset
+or blank. During local development, Vite's existing `/api` proxy forwards requests
+to `http://127.0.0.1:3000`. An existing `VITE_API_BASE_URL` of
+`http://127.0.0.1:3000` or `http://localhost:3000` (with an optional trailing slash)
+also uses that proxy in development, avoiding a cross-origin browser request.
+
+For a separate backend, set `VITE_API_BASE_URL` to its HTTP(S) base URL, for example
+`https://backend.example.com`, then restart Vite (or rebuild for production).
+The client appends `/api/ask`; a path prefix is supported. Other explicit URLs are
+honored in development, and all valid explicit URLs are honored in production.
+A production deployment without an explicit URL must serve or reverse-proxy
+`/api/ask` on the frontend origin; Vite's development proxy is not part of the build.
+Do not point this setting at Ollama or include API keys or credentials. Invalid
+explicit configuration still disables sending, with no fallback to another backend.
 
 `POST /api/ask`, `Content-Type: application/json`, `Accept: application/json`:
 

@@ -3,10 +3,45 @@ import { AIUnavailableError, createAIClient, parseAIResponse } from './aiClient'
 
 const answer = { answer: 'Test fixture only.', grounded: true, citations: [{ title: 'Test source', url: 'https://example.com/reference', recordId: 'test-record' }] }
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status })
-afterEach(() => vi.useRealTimers())
+afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); vi.unstubAllGlobals() })
+
+describe.each([true, false])('endpoint selection (development: %s)', development => {
+  it.each([undefined, '', '  '])('defaults to the same-origin proxy for %s', async base => {
+    vi.stubEnv('DEV', development)
+    const fetcher = vi.fn().mockResolvedValue(json(answer))
+    const client = createAIClient(base, fetcher)
+    expect(client.configured).toBe(true)
+    await expect(client.ask('  Question  ')).resolves.toEqual(answer)
+    expect(fetcher).toHaveBeenCalledWith('/api/ask', expect.objectContaining({
+      method: 'POST', body: '{"question":"Question"}', credentials: 'omit', redirect: 'error',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, signal: expect.any(AbortSignal),
+    }))
+  })
+
+  it.each(['http://127.0.0.1:3000', 'http://localhost:3000/'])('uses Vite for the existing local backend only in development: %s', async base => {
+    vi.stubEnv('DEV', development)
+    const fetcher = vi.fn().mockResolvedValue(json(answer))
+    await createAIClient(base, fetcher).ask('Question')
+    expect(fetcher.mock.calls[0][0]).toBe(development ? '/api/ask' : `${base.replace(/\/$/, '')}/api/ask`)
+  })
+
+  it.each([
+    ['https://backend.example.com/', 'https://backend.example.com/api/ask'],
+    [' https://backend.example.com/pharos/ ', 'https://backend.example.com/pharos/api/ask'],
+    ['http://127.0.0.1:4000', 'http://127.0.0.1:4000/api/ask'],
+    ['http://127.0.0.1:3000/pharos', 'http://127.0.0.1:3000/pharos/api/ask'],
+  ])('preserves explicit external or non-proxy endpoints: %s', async (base, endpoint) => {
+    vi.stubEnv('DEV', development)
+    const fetcher = vi.fn().mockResolvedValue(json(answer))
+    const client = createAIClient(base, fetcher)
+    expect(client.configured).toBe(true)
+    await expect(client.ask('Question')).resolves.toEqual(answer)
+    expect(fetcher).toHaveBeenCalledWith(endpoint, expect.objectContaining({ credentials: 'omit', redirect: 'error' }))
+  })
+})
 
 describe('AI client without invented answers', () => {
-  it.each([undefined, '', 'bad-url', 'javascript:alert(1)', 'https://user:secret@example.com', 'https://example.com?key=secret'])('rejects absent or invalid configuration %s without a request', async base => {
+  it.each(['bad-url', 'javascript:alert(1)', '//backend.example.com', 'https://user:secret@example.com', 'https://example.com?key=secret', 'http://127.0.0.1:3000/#fragment', 'http://user:secret@127.0.0.1:3000'])('rejects invalid configuration %s without a request', async base => {
     const fetcher = vi.fn()
     const client = createAIClient(base, fetcher)
     expect(client.configured).toBe(false)
@@ -18,6 +53,17 @@ describe('AI client without invented answers', () => {
     const result = await createAIClient('https://backend.example.com/', fetcher).ask('  Question  ')
     expect(result).toEqual(answer)
     expect(fetcher).toHaveBeenCalledWith('https://backend.example.com/api/ask', expect.objectContaining({ method: 'POST', body: '{"question":"Question"}', credentials: 'omit', redirect: 'error', signal: expect.any(AbortSignal) }))
+  })
+  it('uses the same-origin default through the exported app client', async () => {
+    vi.resetModules()
+    vi.stubEnv('DEV', true)
+    vi.stubEnv('VITE_API_BASE_URL', 'http://127.0.0.1:3000')
+    const fetcher = vi.fn().mockResolvedValue(json({ answer: 'General guidance.', grounded: false, citations: [] }))
+    vi.stubGlobal('fetch', fetcher)
+    const { aiClient } = await import('./aiClient')
+    expect(aiClient.configured).toBe(true)
+    await expect(aiClient.ask('Question')).resolves.toEqual({ answer: 'General guidance.', grounded: false, citations: [] })
+    expect(fetcher.mock.calls[0][0]).toBe('/api/ask')
   })
   it.each([404, 502, 503, 504])('reports HTTP %s as unavailable', async status => {
     await expect(createAIClient('http://localhost:3000', vi.fn().mockResolvedValue(json({}, status))).ask('Question')).rejects.toBeInstanceOf(AIUnavailableError)
