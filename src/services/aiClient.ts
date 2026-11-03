@@ -32,10 +32,14 @@ export function parseAIResponse(value: unknown): AIResponse {
 }
 
 function endpointFor(baseUrl: string | undefined): string | null {
-  if (!baseUrl?.trim()) return null
+  if (!baseUrl?.trim()) return '/api/ask'
   try {
     const base = new URL(baseUrl.trim())
     if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password || base.search || base.hash) return null
+    // The local backend is already behind Vite's /api proxy. Keep browser requests
+    // same-origin even when an existing development env points directly at it.
+    if (import.meta.env.DEV && base.pathname === '/'
+      && ['http://127.0.0.1:3000', 'http://localhost:3000'].includes(base.origin)) return '/api/ask'
     return `${base.href.replace(/\/$/, '')}/api/ask`
   } catch { return null }
 }
