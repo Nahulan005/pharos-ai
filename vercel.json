@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://pharos-ai-xed9.onrender.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
