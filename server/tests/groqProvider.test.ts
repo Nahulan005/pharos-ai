@@ -75,7 +75,9 @@ test('transport, auth, rate limit and model errors are sanitized without logging
     failure(await generateWithProvider(adapter(async () => new Response(key, { status })), messages), code)
   }
   failure(await generateWithProvider(adapter(async () => json({ error: { message: key } })), messages), 'PROVIDER_ERROR')
-  assert.equal(warn.mock.callCount() + log.mock.callCount() + error.mock.callCount(), 0)
+  assert.deepEqual(warn.mock.calls.map(call => call.arguments),
+    [401, 403, 404, 429, 500, 503].map(status => ['[PHAROS Groq] HTTP_FAILURE', status]))
+  assert.equal(log.mock.callCount() + error.mock.callCount(), 0)
 })
 
 test('malformed envelopes, truncation, tool calls, refusals and invalid JSON fail closed', async () => {

@@ -42,6 +42,7 @@ export class GroqProvider implements AIProvider {
     } catch { return providerFailure('UNAVAILABLE') }
     // No retries, raw error bodies, credentials, reasoning or prompts in logs/results.
     if (!response.ok) {
+      console.warn('[PHAROS Groq] HTTP_FAILURE', response.status)
       await response.body?.cancel().catch(() => {})
       return providerFailure(response.status === 429 || response.status >= 500 ? 'UNAVAILABLE' : 'PROVIDER_ERROR')
     }
