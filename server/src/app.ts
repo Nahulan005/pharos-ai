@@ -8,10 +8,11 @@ import { createAskRoutes } from './askRoutes.ts'
 import { createLimitedAnswerEngine } from './limitedAnswerEngine.ts'
 import type { AnswerEngine } from './limitedAnswerEngine.ts'
 import { OllamaProvider } from './ollamaProvider.ts'
+import { GroqProvider } from './groqProvider.ts'
 import type { AIProvider } from './aiProvider.ts'
 
 export function createApp(store: OpportunityStore = createOpportunityStore(),
-  answerEngine?: AnswerEngine, provider: AIProvider = new OllamaProvider()) {
+  answerEngine?: AnswerEngine, provider: AIProvider = process.env.GROQ_API_KEY ? new GroqProvider() : new OllamaProvider()) {
   const app = express()
   app.disable('x-powered-by')
   app.use((_request, response, next) => { response.setHeader('Cache-Control', 'no-store'); next() })
