@@ -13,7 +13,7 @@ import { createLimitedAnswerEngine, UNAVAILABLE_INFORMATION } from '../src/limit
 const key = 'gsk-test-only-secret'
 const model = 'llama-3.1-8b-instant'
 const messages = [{ role: 'system' as const, content: 'Return JSON.' }, { role: 'user' as const, content: 'Practice advice.' }]
-const envNames = ['GROQ_API_KEY', 'GROQ_MODEL', 'OLLAMA_MODEL', 'OLLAMA_BASE_URL'] as const
+const envNames = ['GROQ_API_KEY', 'GROQ_MODEL', 'OLLAMA_MODEL', 'OLLAMA_BASE_URL', 'GEMINI_API_KEY'] as const
 let saved: (string | undefined)[]
 beforeEach(() => {
   saved = envNames.map(name => process.env[name])
@@ -21,6 +21,7 @@ beforeEach(() => {
   delete process.env.GROQ_MODEL
   delete process.env.OLLAMA_MODEL
   delete process.env.OLLAMA_BASE_URL
+  delete process.env.GEMINI_API_KEY
 })
 afterEach(() => envNames.forEach((name, i) => { if (saved[i] === undefined) delete process.env[name]; else process.env[name] = saved[i] }))
 const payload = (content = '{"answer":"Practice regularly."}', modelId = model) => ({ model: modelId,

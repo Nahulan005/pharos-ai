@@ -9,6 +9,8 @@ import { createLimitedAnswerEngine } from './limitedAnswerEngine.ts'
 import type { AnswerEngine } from './limitedAnswerEngine.ts'
 import { OllamaProvider } from './ollamaProvider.ts'
 import { GroqProvider } from './groqProvider.ts'
+import { GeminiProvider } from './geminiProvider.ts'
+import { createResearchAnswerEngine } from './researchAnswerEngine.ts'
 import type { AIProvider } from './aiProvider.ts'
 
 export function createApp(store: OpportunityStore = createOpportunityStore(),
@@ -17,7 +19,9 @@ export function createApp(store: OpportunityStore = createOpportunityStore(),
   app.disable('x-powered-by')
   app.use((_request, response, next) => { response.setHeader('Cache-Control', 'no-store'); next() })
   app.use('/api', createApiRoutes(store))
-  app.use('/api', createAskRoutes(answerEngine ?? createLimitedAnswerEngine(provider), { store, provider }))
+  const askEngine = answerEngine ?? (process.env.GEMINI_API_KEY
+    ? createResearchAnswerEngine(new GeminiProvider()) : createLimitedAnswerEngine(provider))
+  app.use('/api', createAskRoutes(askEngine, { store, provider }))
   app.use((_request, response) => {
     const error: ApiError = { error: { code: 'NOT_FOUND', message: 'Endpoint not found.' } }
     response.status(404).json(error)
