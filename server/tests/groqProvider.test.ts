@@ -173,3 +173,58 @@ test('synthetic demo opportunity is excluded before Groq inference', async () =>
     { careerInterests: [], skills: [], weeklyLearningHours: null })
   assert.match(result.answer, /fictional demo/); assert.equal(result.grounded, false); assert.deepEqual(result.citations, [])
 })
+
+test('GPT-OSS payload retains JSON mode and safe response handling without unsupported reasoning parameters', async () => {
+  const modelId = 'openai/gpt-oss-20b'
+  const provider = new GroqProvider({ model: modelId, fetch: async (_url, init) => {
+    assert.deepEqual(JSON.parse(String(init?.body)), { model: modelId, messages, stream: false,
+      response_format: { type: 'json_object' }, temperature: 0, max_completion_tokens: 768 })
+    return json(payload(undefined, modelId))
+  } })
+  const result = await generateWithProvider(provider, messages)
+  assert.ok(result.ok)
+  assert.equal(result.value.content, '{"answer":"Practice regularly."}')
+  assert.doesNotMatch(JSON.stringify(result), /private-reasoning/)
+})
+
+test('HTTP 400 diagnostics allowlist categories and never log error messages, failed generations or unknown codes', async t => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const log = t.mock.method(console, 'log', () => {})
+  const error = t.mock.method(console, 'error', () => {})
+  for (const [code, category] of [
+    ['json_validate_failed', 'JSON_VALIDATION_FAILED'], ['context_length_exceeded', 'CONTEXT_LENGTH_EXCEEDED'],
+    ['model_not_found', 'MODEL_NOT_FOUND'], ['unsupported_parameter', 'UNSUPPORTED_PARAMETER'],
+    ['invalid_parameter', 'INVALID_PARAMETER'], [key, 'UNCLASSIFIED'], ['__proto__', 'UNCLASSIFIED'],
+  ]) {
+    const provider = adapter(async () => new Response(JSON.stringify({ error: { code, type: key,
+      message: key, failed_generation: 'PRIVATE_STUDENT_CONTENT', headers: { Authorization: key } } }),
+    { status: 400, headers: { 'Content-Type': 'application/json' } }))
+    failure(await generateWithProvider(provider, messages), 'PROVIDER_ERROR')
+    assert.deepEqual(warn.mock.calls.slice(-2).map(call => call.arguments), [
+      ['[PHAROS Groq] HTTP_FAILURE', 400], ['[PHAROS Groq] BAD_REQUEST_CATEGORY', category],
+    ])
+  }
+  failure(await generateWithProvider(adapter(async () => new Response(JSON.stringify({ error: {
+    type: 'invalid_request_error', code: key, message: key,
+  } }), { status: 400, headers: { 'Content-Type': 'application/json' } })), messages), 'PROVIDER_ERROR')
+  assert.deepEqual(warn.mock.calls.at(-1)!.arguments, ['[PHAROS Groq] BAD_REQUEST_CATEGORY', 'INVALID_REQUEST'])
+  assert.doesNotMatch(JSON.stringify(warn.mock.calls.map(call => call.arguments)), /gsk-|PRIVATE_STUDENT_CONTENT/)
+  assert.equal(log.mock.callCount() + error.mock.callCount(), 0)
+})
+
+test('HTTP 400 malformed, oversized and stalled diagnostic bodies preserve the safe provider failure', async t => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  for (const [body, category] of [
+    ['{secret', 'UNCLASSIFIED'], ['x'.repeat(16 * 1024 + 1), 'ERROR_BODY_TOO_LARGE'],
+  ]) {
+    failure(await generateWithProvider(adapter(async () => new Response(body,
+      { status: 400, headers: { 'Content-Type': 'application/json' } })), messages), 'PROVIDER_ERROR')
+    assert.deepEqual(warn.mock.calls.at(-1)!.arguments, ['[PHAROS Groq] BAD_REQUEST_CATEGORY', category])
+  }
+  const stalled = () => new Response(new ReadableStream({ pull: () => new Promise(() => {}) }),
+    { status: 400, headers: { 'Content-Type': 'application/json' } })
+  failure(await generateWithProvider(adapter(async () => stalled()), messages, { timeoutMs: 2000 }), 'PROVIDER_ERROR')
+  assert.deepEqual(warn.mock.calls.at(-1)!.arguments, ['[PHAROS Groq] BAD_REQUEST_CATEGORY', 'ERROR_BODY_TIMEOUT'])
+  // The caller's shorter deadline still wins over the diagnostic read budget.
+  failure(await generateWithProvider(adapter(async () => stalled()), messages, { timeoutMs: 10 }), 'TIMEOUT')
+})

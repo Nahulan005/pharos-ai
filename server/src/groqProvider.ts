@@ -8,6 +8,47 @@ export interface GroqOptions {
 }
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v)
 
+/** Only fixed categories may leave this parser; error messages/failed_generation are never logged.
+ * Keep diagnostic work bounded so a broken error body cannot stall the existing failure path.
+ */
+async function badRequestCategory(response: Response): Promise<string> {
+  if (!response.body || !/^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type') ?? '')) return 'UNCLASSIFIED'
+  const reader = response.body.getReader()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    const read = async () => {
+      const chunks: Uint8Array[] = []
+      let size = 0
+      while (true) {
+        const next = await reader.read()
+        if (next.done) break
+        size += next.value.byteLength
+        if (size > 16 * 1024) return 'ERROR_BODY_TOO_LARGE'
+        chunks.push(next.value)
+      }
+      const data: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks)))
+      if (!object(data) || !object(data.error)) return 'UNCLASSIFIED'
+      // Exact matching only, never print even a sanitized/truncated server-supplied string.
+      switch (data.error.code) {
+        case 'json_validate_failed': return 'JSON_VALIDATION_FAILED'
+        case 'context_length_exceeded': return 'CONTEXT_LENGTH_EXCEEDED'
+        case 'model_not_found': return 'MODEL_NOT_FOUND'
+        case 'unsupported_parameter': return 'UNSUPPORTED_PARAMETER'
+        case 'invalid_parameter': return 'INVALID_PARAMETER'
+      }
+      return data.error.type === 'invalid_request_error' ? 'INVALID_REQUEST' : 'UNCLASSIFIED'
+    }
+    return await Promise.race([read(), new Promise<string>(resolve => {
+      timer = setTimeout(() => resolve('ERROR_BODY_TIMEOUT'), 250)
+    })])
+  } catch { return 'UNCLASSIFIED' }
+  finally {
+    clearTimeout(timer)
+    void reader.cancel().catch(() => {})
+    reader.releaseLock()
+  }
+}
+
 /** Backend-only, fixed HTTPS destination. Credentials come exclusively from the server environment. */
 export class GroqProvider implements AIProvider {
   readonly providerId = 'groq'
@@ -43,6 +84,7 @@ export class GroqProvider implements AIProvider {
     // No retries, raw error bodies, credentials, reasoning or prompts in logs/results.
     if (!response.ok) {
       console.warn('[PHAROS Groq] HTTP_FAILURE', response.status)
+      if (response.status === 400) console.warn('[PHAROS Groq] BAD_REQUEST_CATEGORY', await badRequestCategory(response))
       await response.body?.cancel().catch(() => {})
       return providerFailure(response.status === 429 || response.status >= 500 ? 'UNAVAILABLE' : 'PROVIDER_ERROR')
     }
