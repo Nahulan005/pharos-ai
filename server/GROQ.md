@@ -19,7 +19,14 @@ is [Groq chat completions](https://console.groq.com/docs/api-reference):
 `https://api.groq.com/openai/v1/chat/completions`.
 
 The adapter uses bearer authorization, non-streaming JSON output, temperature 0,
-and a 768-token completion limit. Responses are bounded to 256 KiB, validated as
+and a 768-token completion limit. For `openai/gpt-oss-20b` only, the limit is 4096
+with `reasoning_effort: "low"` and `include_reasoning: false`. This provides
+headroom for reasoning and the final JSON; excluding reasoning from the response
+does not disable reasoning. It mitigates possible budget pressure behind
+`JSON_VALIDATION_FAILED`, but does not establish the cause of a particular failure.
+The limit may increase token use; existing request timeouts still apply.
+See [Groq reasoning controls](https://console.groq.com/docs/reasoning).
+Responses are bounded to 256 KiB, validated as
 JSON objects and checked for complete assistant output. Tool calls, refusals,
 truncation and inline reasoning are rejected. Separate reasoning metadata is never
 returned. Credentials, raw responses, prompts and exceptions are never logged.

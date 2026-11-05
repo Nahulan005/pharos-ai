@@ -73,12 +73,18 @@ export class GroqProvider implements AIProvider {
     if (!this.#apiKey || !/^[\x21-\x7e]+$/.test(this.#apiKey)
       || !/^[a-zA-Z0-9][a-zA-Z0-9._/:-]{0,127}$/.test(this.modelId)) return providerFailure('UNAVAILABLE')
     let response: Response
+    // GPT-OSS reasons even for small JSON answers. Give reasoning/final output headroom;
+    // excluding reasoning from the response does not disable its token consumption.
+    // This mitigates budget pressure, not proof of the cause of every json_validate_failed.
+    const completionOptions = this.modelId === 'openai/gpt-oss-20b'
+      ? { max_completion_tokens: 4096, reasoning_effort: 'low', include_reasoning: false }
+      : { max_completion_tokens: 768 }
     try {
       response = await this.fetcher('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST', redirect: 'error', signal: request.signal,
         headers: { Authorization: `Bearer ${this.#apiKey}`, 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ model: this.modelId, messages: request.messages, stream: false,
-          response_format: { type: 'json_object' }, temperature: 0, max_completion_tokens: 768 }),
+          response_format: { type: 'json_object' }, temperature: 0, ...completionOptions }),
       })
     } catch { return providerFailure('UNAVAILABLE') }
     // No retries, raw error bodies, credentials, reasoning or prompts in logs/results.

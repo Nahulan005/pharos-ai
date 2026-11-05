@@ -8,6 +8,7 @@ import type { GenerationResult } from '../src/aiProvider.ts'
 import { createApp } from '../src/app.ts'
 import { createOpportunityStore } from '../src/opportunityStore.ts'
 import { explainOpportunity } from '../src/opportunityExplanation.ts'
+import { createLimitedAnswerEngine, UNAVAILABLE_INFORMATION } from '../src/limitedAnswerEngine.ts'
 
 const key = 'gsk-test-only-secret'
 const model = 'llama-3.1-8b-instant'
@@ -174,17 +175,65 @@ test('synthetic demo opportunity is excluded before Groq inference', async () =>
   assert.match(result.answer, /fictional demo/); assert.equal(result.grounded, false); assert.deepEqual(result.citations, [])
 })
 
-test('GPT-OSS payload retains JSON mode and safe response handling without unsupported reasoning parameters', async () => {
+test('GPT-OSS uses low reasoning and completion headroom while retaining JSON mode and hiding reasoning', async () => {
   const modelId = 'openai/gpt-oss-20b'
   const provider = new GroqProvider({ model: modelId, fetch: async (_url, init) => {
     assert.deepEqual(JSON.parse(String(init?.body)), { model: modelId, messages, stream: false,
-      response_format: { type: 'json_object' }, temperature: 0, max_completion_tokens: 768 })
+      response_format: { type: 'json_object' }, temperature: 0, max_completion_tokens: 4096,
+      reasoning_effort: 'low', include_reasoning: false })
     return json(payload(undefined, modelId))
   } })
   const result = await generateWithProvider(provider, messages)
   assert.ok(result.ok)
   assert.equal(result.value.content, '{"answer":"Practice regularly."}')
   assert.doesNotMatch(JSON.stringify(result), /private-reasoning/)
+})
+
+test('GPT-OSS configuration preserves both engine schemas and safe fallbacks without retries', async () => {
+  const modelId = 'openai/gpt-oss-20b'
+  const item = (await createOpportunityStore().getAll()).items[0]
+  const profile = { careerInterests: [], skills: [], weeklyLearningHours: null }
+  let mode: 'valid' | 'schema-invalid' | 'http-error' | 'truncated' = 'valid'
+  let calls = 0
+  const provider = new GroqProvider({ model: modelId, fetch: async (_url, init) => {
+    calls++
+    const body = JSON.parse(String(init?.body))
+    assert.equal(body.max_completion_tokens, 4096)
+    assert.equal(body.reasoning_effort, 'low')
+    assert.equal(body.include_reasoning, false)
+    assert.deepEqual(body.response_format, { type: 'json_object' })
+    const context = JSON.parse(body.messages[1].content)
+    assert.match(body.messages[0].content, /JSON object/)
+    if (mode === 'http-error') return new Response(JSON.stringify({ error: {
+      code: 'json_validate_failed', failed_generation: 'private-reasoning', message: key,
+    } }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    const content = context.candidates
+      ? JSON.stringify({ reasonIds: mode === 'schema-invalid' ? [1, 2] : ['explore'] })
+      : JSON.stringify(mode === 'schema-invalid' ? { answer: 'You are eligible.', grounded: true } : { answer: 'Practice regularly.' })
+    const data = payload(content, modelId)
+    if (mode === 'truncated') data.choices[0].finish_reason = 'length'
+    return json(data)
+  } })
+  const engine = createLimitedAnswerEngine(provider)
+  const answer = await engine.answer('How can I learn Python?')
+  assert.ok(answer.ok); assert.match(answer.response.answer, /Practice regularly/)
+  assert.equal(answer.response.grounded, false)
+  assert.match((await explainOpportunity(provider, item, profile)).answer, /AI-selected/)
+  mode = 'schema-invalid'
+  const rejected = await engine.answer('How can I learn Python?')
+  assert.ok(rejected.ok); assert.equal(rejected.response.answer, UNAVAILABLE_INFORMATION)
+  assert.match((await explainOpportunity(provider, item, profile)).answer, /Deterministic explanation/)
+  for (const next of ['http-error', 'truncated'] as const) {
+    mode = next
+    const failed = await engine.answer('How can I learn Python?')
+    assert.ok(!failed.ok)
+    assert.equal(failed.error.code, next === 'http-error' ? 'PROVIDER_ERROR' : 'INVALID_RESPONSE')
+    const fallback = await explainOpportunity(provider, item, profile)
+    assert.match(fallback.answer, /Deterministic explanation/)
+    assert.equal(fallback.grounded, false); assert.deepEqual(fallback.citations, [])
+    assert.doesNotMatch(JSON.stringify(fallback), /private-reasoning|gsk-/)
+  }
+  assert.equal(calls, 8)
 })
 
 test('HTTP 400 diagnostics allowlist categories and never log error messages, failed generations or unknown codes', async t => {
